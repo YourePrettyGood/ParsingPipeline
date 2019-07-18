@@ -80,6 +80,13 @@ It is dependent on `pipeline_environment.sh`, which simply specifies the absolut
 
 The call style is very similar to that used for my [Pseudoreference Pipeline](https://github.com/YourePrettyGood/PseudoreferencePipeline/). It essentially involves passing a task ID (e.g. with SLURM's `$SLURM_ARRAY_TASK_ID` environment variable), a job type, a metadata file, and any extra options.
 
+The extra options are:
+
+1. Minimum read length required before a read (or read pair) is omitted (default: 1 bp, but you should set this to higher, e.g. at least k if you're using kmers downstream)
+1. Minimum quality score when quality trimming (default: 0, which means quality trimming is skipped)
+
+The minimum quality score option should be used for RNAseq data as per [McManes (2014)](https://dx.doi.org/10.3389/fgene.2014.00013), and set to at least 5.
+
 The metadata file is a tab-separated file with one line per sample to be trimmed. For the `TRIM` jobtype, the columns are:
 
 1. Error rate for matching adapter bases

@@ -1,18 +1,15 @@
 #!/bin/bash
 
-#This script uses a metadata file and a task ID to
-#run a pipeline job when submitted with sbatch -a
-#or an equivalent arraying mechanism for other job
-#engines (e.g. SGE, LSF, PBS, etc.)
-#The task ID must be a positive integer
+#This script uses a metadata file and the task ID to
+#run a pipeline job
 
 #The arguments are:
-#1) task ID (an integer from 1 to the number of lines in the metadata file)
-# (Note: This can be passed in as $SLURM_ARRAY_TASK_ID for SLURM arrays)
+#1) task number
 #2) job type (i.e. TRIM)
 #3) metadata file (TSV comprised of error rate, stringency, read file(s))
 #Maybe later add support for QV style and min trimmed read length in metadata?
-#Optional argument 4) minimum trimmed read length for all samples
+#Optional argument 4) minimum trimmed read length for all samples (default 1)
+#Optional argument 5) minimum quality score for quality trimming (default 0)
 
 #Note: SLURM submission parameters are specified in the sbatch
 # call to this script (e.g. --mem, -N 1, --ntasks-per-node=1,
@@ -28,9 +25,12 @@ source ${SCRIPTDIR}/pipeline_environment.sh
 
 #If we later want to make concomitant quality trimming available, change this:
 MINQV=0
+if [[ "$5" -gt "0" ]]; then
+   MINQV=$5
+fi
 #Same for minimum trimmed read length:
 MINLENGTH=1
-if (( $4 > 0 )); then
+if [[ "$4" -gt "0" ]]; then
    MINLENGTH=$4
 fi
 #Same for quality score scale (33 or 64):
@@ -54,7 +54,7 @@ while read -r -a metadatafields
 done < $METADATA
 if [[ -z "$ERRORRATE" ]]; then
    echo "Unable to find sample $TASKID in metadata file. Skipping."
-   exit 1
+   exit 4
 fi
 
 if [[ $JOBTYPE =~ "TRIM" ]]; then
@@ -62,7 +62,7 @@ if [[ $JOBTYPE =~ "TRIM" ]]; then
    CMD="${TRIMGALORE} --path_to_cutadapt ${CUTADAPT} --phred${QVTYPE} --quality ${MINQV} -e ${ERRORRATE} --stringency ${STRINGENCY} --length ${MINLENGTH}${PAIRED} ${READS}"
 else
    echo "Unintelligible job type $JOBTYPE"
-   exit 2
+   exit 3
 fi
 
 $CMD
