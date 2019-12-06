@@ -9,6 +9,26 @@ All credit for this script goes to Lance Parsons, as it comes from [his bitbucke
 
 ## Parsing scripts:
 
+### `extractIndexReads.awk`
+
+This awk script generates gzipped index read FASTQ files based on the index sequences found in the standard Illumina 1.8+ header.  This enables parsing using `divideConquerParser.sh` when a sequencing center only provides you with unparsed R1 and R2 FASTQ files (e.g. Novogene has done this before, other providers may as well).
+
+Be sure to pass `-v "prefix=[output FASTQ prefix]"` when calling the script, and either pipe the uncompressed contents of the R1 FASTQ file in, or use process substitution to pass it in as an argument.
+
+Example usage:
+
+```bash
+#Extracts index reads from R1 reads from lane Pgc20_L2
+#Outputs to Pgc20_L2_I1.fastq.gz and Pgc20_L2_I2.fastq.gz
+gzip -dc Pgc20_L2_R1.fastq.gz | /usr/bin/time -v [path to ParsingPipeline]/extractIndexReads.awk -v "prefix=Pgc20_L2" 2> eIR_fromR1_Pgc20_L2.stderr > eIR_fromR1_Pgc20_L2.stdout
+#Typically you'd want to generate read histograms for the resultant
+# I1 and I2 read files like so:
+gzip -dc Pgc20_L2_I1.fastq.gz | [path to ParsingPipeline]/ReadHistogram.sh | [path to ParsingPipeline]/labelIndexReadHistogram.pl -b Pgc20_L2_i7_barcodes.tsv > Pgc20_L2_I1_Histogram.tsv
+gzip -dc Pgc20_L2_I2.fastq.gz | [path to ParsingPipeline]/ReadHistogram.sh | [path to ParsingPipeline]/labelIndexReadHistogram.pl -b Pgc20_L2_i5_barcodes.tsv > Pgc20_L2_I2_Histogram.tsv
+#Usage for later i5 parsing with divideConquerParser.sh might look like:
+[path to ParsingPipeline]/divideConquerParser.sh 4 "Pgc20_L2_R1.fastq.gz Pgc20_L2_R2.fastq.gz Pgc20_L2_I1.fastq.gz Pgc20_L2_I2.fastq.gz" 8 Pgc20_L2_i5_barcodes.tsv 4
+```
+
 ### `divideConquerParser.sh`
 
 This is a bash wrapper script to divide the reads into roughly equal chunks, parse each chunk in parallel, and then merge the results. The current implementation takes up quite a bit of space during the splitting step, since it has to decompress the reads to split them, and then compress the splits. I'll be testing the --filter flag to GNU coreutils split to mitigate the issue in the future.
