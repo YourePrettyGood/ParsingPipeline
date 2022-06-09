@@ -67,14 +67,28 @@ Oftentimes this is the fastest way to pre-diagnose problems with your barcode fi
 
 This quick bash script just simply wraps a one-liner that creates a histogram TSV of the index reads, sorted in descending order by count.  This histogram file is useful as a QC check before parsing, as it usually takes substantially less time to run than parsing.
 
-It's essentially just two columns:
+The output is essentially just two columns:
 
 1. Index sequence
 2. Count of index reads matching the sequence in column 1
 
+Usage:
+
+`ReadHistogram.sh <input FASTQ> [sort options]`
+
+Note that `[sort options]` is an optional argument, but must be a quoted string in order to work properly.  Treat it like a quoted version of what you would normally pass to `sort`.
+
 Example usage:
 
 `ReadHistogram.sh MySequencingLane_I1.fastq.gz > MySequencingLane_i7_index_histogram.tsv`
+
+One error message that sometimes comes up is:
+
+`sort: write failed: /tmp/[some weird string]: No space left on device`
+
+If you see this message, or you think you have a TON of reads to sort through, you should pass a second argument to `ReadHistogram.sh` that specifies the arguments to `sort` you want to add.  For instance, you could add `"-T [path to a temp directory with a lot of space]"` (make absolutely sure to keep the double quotes!), which would tell `sort` to place its temporary files in the directory you provided, rather than `/tmp`.
+
+The `/tmp` directory is a special directory in Linux that has its own filesystem and usually doesn't have a ton of space compared to other drives/mounts. Unix `sort` performs a type of "external" sort that sorts subsets of the input data, then stores them temporarily to disk, and finally performs a sorting merge of all the subsets at the end (similar to the merge step of a merge sort), so for extremely large inputs it will often require more disk space than is available in `/tmp`.  Check `man sort` to ensure that your version of `sort` supports the `-T` option.
 
 ### `labelIndexReadHistogram.pl`
 
@@ -105,7 +119,11 @@ The extra options are:
 1. Minimum read length required before a read (or read pair) is omitted (default: 1 bp, but you should set this to higher, e.g. at least k if you're using kmers downstream)
 1. Minimum quality score when quality trimming (default: 0, which means quality trimming is skipped)
 
-The minimum quality score option should be used for RNAseq data as per [McManes (2014)](https://dx.doi.org/10.3389/fgene.2014.00013), and set to at least 5.
+Note: In general, leave the minimum quality score for trimming at it's default (i.e. 0), as quality trimming is detrimental for most purposes.  Modern mappers and reads are much more tolerant of poor-quality regions, so retaining the information in these regions can actually be helpful.
+
+The only use-case where it may still be beneficial is for RNAseq data for *de novo* transcriptome assembly.
+
+The minimum quality score option should only really be used for RNAseq data meant for *de novo* transcriptome assembly as per [McManes (2014)](https://dx.doi.org/10.3389/fgene.2014.00013), and set to at least 5.
 
 The metadata file is a tab-separated file with one line per sample to be trimmed. For the `TRIM` jobtype, the columns are:
 
